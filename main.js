@@ -145,10 +145,8 @@ ipcMain.handle('wordlist-status', () => WordValidator.getStatus());
 
 // ── IPC: Discord webhook (stub — filled in later) ──────────
 ipcMain.handle('notify-discord', async (_, { message }) => {
-  // TODO: configure webhook URL in settings
   const webhookUrl = store.get('discord.webhookUrl');
   if (!webhookUrl) return { ok: false, reason: 'not_configured' };
-
   const axios = require('axios');
   try {
     await axios.post(webhookUrl, { content: message });
@@ -158,19 +156,25 @@ ipcMain.handle('notify-discord', async (_, { message }) => {
   }
 });
 
-// ── IPC: Supabase scores (stub — filled in later) ──────────
-ipcMain.handle('submit-score', async (_, { game, playerUuid, playerName, score, metadata }) => {
-  // TODO: configure Supabase URL + anon key
-  const supabaseUrl  = store.get('supabase.url');
-  const supabaseKey  = store.get('supabase.anonKey');
-  if (!supabaseUrl || !supabaseKey) return { ok: false, reason: 'not_configured' };
+// ── IPC: Supabase scores ────────────────────────────────────
+const cfg = (() => { try { return require('./src/config'); } catch { return {}; } })();
+const SUPA_URL = cfg.supabaseUrl;
+const SUPA_KEY = cfg.supabaseKey;
+const supaHeaders = SUPA_KEY ? {
+  apikey: SUPA_KEY,
+  Authorization: `Bearer ${SUPA_KEY}`,
+  'Content-Type': 'application/json',
+  Prefer: 'return=minimal'
+} : null;
 
+ipcMain.handle('submit-score', async (_, { game, playerUuid, playerName, score, metadata }) => {
+  if (!supaHeaders) return { ok: false, reason: 'not_configured' };
   const axios = require('axios');
   try {
-    const res = await axios.post(
-      `${supabaseUrl}/rest/v1/scores`,
-      { game, player_uuid: playerUuid, player_name: playerName, score, metadata },
-      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' } }
+    await axios.post(
+      `${SUPA_URL}/rest/v1/scores`,
+      { game, player_uuid: playerUuid, player_name: playerName, score: score || 1, metadata: metadata || null },
+      { headers: supaHeaders }
     );
     return { ok: true };
   } catch (err) {
@@ -179,17 +183,29 @@ ipcMain.handle('submit-score', async (_, { game, playerUuid, playerName, score, 
 });
 
 ipcMain.handle('get-leaderboard', async (_, { game, limit = 10 }) => {
-  const supabaseUrl = store.get('supabase.url');
-  const supabaseKey = store.get('supabase.anonKey');
-  if (!supabaseUrl || !supabaseKey) return { ok: false, reason: 'not_configured', data: [] };
-
+  if (!supaHeaders) return { ok: false, reason: 'not_configured', data: [] };
   const axios = require('axios');
   try {
+    // Busca até 1000 registros e agrupa por player no JS (suficiente para grupo de amigos)
     const res = await axios.get(
-      `${supabaseUrl}/rest/v1/scores?game=eq.${game}&order=score.desc&limit=${limit}`,
-      { headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` } }
+      `${SUPA_URL}/rest/v1/scores?game=eq.${game}&select=player_uuid,player_name,score&limit=1000`,
+      { headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` } }
     );
-    return { ok: true, data: res.data };
+
+    const grouped = {};
+    for (const row of res.data) {
+      if (!grouped[row.player_uuid]) {
+        grouped[row.player_uuid] = { name: row.player_name, wins: 0 };
+      }
+      grouped[row.player_uuid].wins += row.score;
+    }
+
+    const data = Object.values(grouped)
+      .sort((a, b) => b.wins - a.wins)
+      .slice(0, limit)
+      .map((p, i) => ({ rank: i + 1, name: p.name, wins: p.wins }));
+
+    return { ok: true, data };
   } catch (err) {
     return { ok: false, error: err.message, data: [] };
   }

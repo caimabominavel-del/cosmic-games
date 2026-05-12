@@ -5,3 +5,5 @@ release/
 .env
 *.log
 wordlist-cache/
+src/config.js
+.test-user-2/

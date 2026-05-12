@@ -254,6 +254,19 @@ function setupSocketHandlers() {
     stopBombTimer();
     showScreen('gameover');
     renderGameOver(winner);
+
+    // Submete vitória se eu ganhei
+    if (winner && winner.id === myPlayerId) {
+      window.cosmic.submitScore({
+        game: 'cosmic-bomb',
+        playerUuid: profile.uuid,
+        playerName: profile.username,
+        score: 1
+      }).catch(() => {});
+    }
+
+    // Carrega leaderboard global
+    loadLeaderboard();
   });
 
   socket.on('disconnect', () => {
@@ -505,6 +518,7 @@ function addWordToLog(word, playerId) {
 // ── Game over ─────────────────────────────────────────────────
 function renderGameOver(winner) {
   $('word-log').innerHTML = '';
+  $('leaderboard-rows').innerHTML = '<div class="lb-loading">Carregando...</div>';
 
   if (winner) {
     $('gameover-title').textContent = '🏆 Temos um vencedor!';
@@ -523,6 +537,30 @@ function renderGameOver(winner) {
     $('gameover-title').textContent = '💥 Todos explodiram!';
     $('winner-display').innerHTML = '<div style="font-size:48px">🤯</div>';
   }
+}
+
+async function loadLeaderboard() {
+  const el = $('leaderboard-rows');
+  if (!el) return;
+
+  // Pequeno delay para dar tempo do score ser gravado
+  await new Promise(r => setTimeout(r, 1500));
+
+  const result = await window.cosmic.getLeaderboard({ game: 'cosmic-bomb', limit: 10 });
+
+  if (!result.ok || !result.data.length) {
+    el.innerHTML = '<div class="lb-loading">Sem dados ainda.</div>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉'];
+  el.innerHTML = result.data.map(p => `
+    <div class="lb-row">
+      <span class="lb-rank">${medals[p.rank - 1] || `#${p.rank}`}</span>
+      <span class="lb-name">${esc(p.name)}</span>
+      <span class="lb-wins">${p.wins} vitória${p.wins !== 1 ? 's' : ''}</span>
+    </div>
+  `).join('');
 }
 
 // ── Screen management ─────────────────────────────────────────
