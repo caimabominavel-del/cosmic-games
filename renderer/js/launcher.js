@@ -46,6 +46,7 @@ function showProfileOverlay(prefill = false) {
 
   if (prefill && profile) {
     document.getElementById('username-input').value = profile.username || '';
+    document.getElementById('catchphrase-input').value = profile.catchphrase || '';
     selectedEmoji = profile.icon || '🚀';
     pendingAvatarBase64 = profile.avatarBase64 || null;
     updateEmojiSelection();
@@ -68,9 +69,12 @@ async function saveProfile() {
     return;
   }
 
+  const catchphrase = document.getElementById('catchphrase-input').value.trim();
+
   const updated = {
     ...profile,
     username: name,
+    catchphrase: catchphrase || '',
     icon: selectedEmoji,
     avatarBase64: pendingAvatarBase64 || null,
     configured: true

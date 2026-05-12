@@ -268,26 +268,23 @@ function setupSocketHandlers() {
     showScreen('gameover');
     renderGameOver(winner);
 
-    // Cada jogador submete seu próprio score
-    const me = players.find(p => p.id === myPlayerId);
-    if (me && me.score > 0) {
-      window.cosmic.submitScore({
-        game:       'cosmic-bomb',
-        playerUuid: profile.uuid,
-        playerName: profile.username,
-        score:      me.score
-      }).catch(() => {});
-    }
-
-    // Notifica Discord se eu ganhei
+    // Notifica Discord se eu ganhei a partida
     if (winner && winner.id === myPlayerId) {
       window.cosmic.notifyDiscord({
+        type:         'win',
         winnerName:   profile.username,
         winnerIcon:   profile.icon || '🏆',
         gameName:     'Cosmic Bomb',
         totalPlayers: players.length,
-        totalRounds:  state.roundNumber
+        totalRounds:  state.roundNumber,
+        catchphrase:  profile.catchphrase || ''
       }).catch(() => {});
+    }
+
+    // Submete score e verifica passagem no ranking
+    const me = players.find(p => p.id === myPlayerId);
+    if (me && me.score > 0) {
+      submitScoreAndCheckPassing(me.score);
     }
 
     loadLeaderboard();
@@ -579,6 +576,61 @@ function renderGameOver(winner) {
   } else {
     $('gameover-title').textContent = '💥 Todos explodiram!';
     $('winner-display').innerHTML = '<div style="font-size:48px">🤯</div>';
+  }
+}
+
+async function submitScoreAndCheckPassing(myScore) {
+  // 1) Snapshot do ranking ANTES de submeter
+  const before = await window.cosmic.getLeaderboard({ game: 'cosmic-bomb', limit: 50 });
+  const rankBefore = before.ok
+    ? (before.data.find(p => p.uuid === profile.uuid)?.rank ?? null)
+    : null;
+
+  // 2) Submete o score
+  await window.cosmic.submitScore({
+    game:       'cosmic-bomb',
+    playerUuid: profile.uuid,
+    playerName: profile.username,
+    score:      myScore
+  }).catch(() => {});
+
+  // 3) Aguarda Supabase processar e pega ranking DEPOIS
+  await new Promise(r => setTimeout(r, 2500));
+  const after = await window.cosmic.getLeaderboard({ game: 'cosmic-bomb', limit: 50 });
+  if (!after.ok || !after.data.length) return;
+
+  const myEntry  = after.data.find(p => p.uuid === profile.uuid);
+  if (!myEntry) return;
+
+  const rankAfter = myEntry.rank;
+  const prevRank  = rankBefore ?? (before.ok ? before.data.length + 1 : 999);
+
+  // Não melhorou de posição — sem notificação
+  if (rankAfter >= prevRank) return;
+
+  if (rankAfter === 1) {
+    // Novo rei!
+    window.cosmic.notifyDiscord({
+      type:        'new_king',
+      playerName:  profile.username,
+      gameName:    'Cosmic Bomb',
+      score:       myEntry.wins,
+      catchphrase: profile.catchphrase || ''
+    }).catch(() => {});
+  } else {
+    // Passou alguém que estava na posição que agora é minha
+    const passedEntry = before.data?.[rankAfter - 1]; // quem estava nessa posição antes
+    if (passedEntry && passedEntry.uuid !== profile.uuid) {
+      window.cosmic.notifyDiscord({
+        type:        'passed',
+        playerName:  profile.username,
+        passedName:  passedEntry.name,
+        gameName:    'Cosmic Bomb',
+        newRank:     rankAfter,
+        score:       myEntry.wins,
+        catchphrase: profile.catchphrase || ''
+      }).catch(() => {});
+    }
   }
 }
 

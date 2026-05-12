@@ -144,21 +144,51 @@ ipcMain.handle('download-wordlist', async () => {
 ipcMain.handle('wordlist-status', () => WordValidator.getStatus());
 
 // ── IPC: Discord webhook ────────────────────────────────────
-ipcMain.handle('notify-discord', async (_, { winnerName, winnerIcon, gameName, totalPlayers, totalRounds }) => {
+ipcMain.handle('notify-discord', async (_, payload) => {
   const webhookUrl = cfg.discordWebhook;
   if (!webhookUrl) return { ok: false, reason: 'not_configured' };
 
   const axios = require('axios');
-  try {
-    await axios.post(webhookUrl, {
-      embeds: [{
-        title: `${winnerIcon || '🏆'} ${winnerName} venceu uma partida!`,
-        description: `**${gameName}** · ${totalPlayers} jogadores · ${totalRounds} rodadas`,
+  const phrase = payload.catchphrase ? `\n*"${payload.catchphrase}"*` : '';
+  let embed;
+
+  switch (payload.type) {
+    case 'win':
+      embed = {
+        title: `${payload.winnerIcon || '🏆'} ${payload.winnerName} venceu uma partida!`,
+        description: `**${payload.gameName}** · ${payload.totalPlayers} jogadores · ${payload.totalRounds} rodadas`,
         color: 0x8b5cf6,
         footer: { text: 'Cosmic Games' },
         timestamp: new Date().toISOString()
-      }]
-    });
+      };
+      break;
+
+    case 'new_king':
+      embed = {
+        title: `👑 ${payload.playerName} agora é o rei do ${payload.gameName}!`,
+        description: `**${payload.score.toLocaleString('pt-BR')} pontos**${phrase}`,
+        color: 0xf59e0b,
+        footer: { text: 'Cosmic Games' },
+        timestamp: new Date().toISOString()
+      };
+      break;
+
+    case 'passed':
+      embed = {
+        title: `⚡ ${payload.playerName} passou ${payload.passedName} no ${payload.gameName}!`,
+        description: `Agora em **#${payload.newRank}** com **${payload.score.toLocaleString('pt-BR')} pontos**${phrase}`,
+        color: 0x3b82f6,
+        footer: { text: 'Cosmic Games' },
+        timestamp: new Date().toISOString()
+      };
+      break;
+
+    default:
+      return { ok: false, reason: 'unknown_type' };
+  }
+
+  try {
+    await axios.post(webhookUrl, { embeds: [embed] });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
@@ -204,7 +234,7 @@ ipcMain.handle('get-leaderboard', async (_, { game, limit = 10 }) => {
     const grouped = {};
     for (const row of res.data) {
       if (!grouped[row.player_uuid]) {
-        grouped[row.player_uuid] = { name: row.player_name, wins: 0 };
+        grouped[row.player_uuid] = { uuid: row.player_uuid, name: row.player_name, wins: 0 };
       }
       grouped[row.player_uuid].wins += row.score;
     }
@@ -212,7 +242,7 @@ ipcMain.handle('get-leaderboard', async (_, { game, limit = 10 }) => {
     const data = Object.values(grouped)
       .sort((a, b) => b.wins - a.wins)
       .slice(0, limit)
-      .map((p, i) => ({ rank: i + 1, name: p.name, wins: p.wins }));
+      .map((p, i) => ({ rank: i + 1, uuid: p.uuid, name: p.name, wins: p.wins }));
 
     return { ok: true, data };
   } catch (err) {

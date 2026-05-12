@@ -544,6 +544,13 @@ input  { font-family: inherit; }
 .name-input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
 .name-input::placeholder { color: var(--text-muted); }
 
+.catchphrase-input {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--cyan);
+}
+.catchphrase-input::placeholder { color: var(--text-muted); font-style: italic; }
+
 .save-btn {
   padding: 12px;
   background: linear-gradient(135deg, var(--purple), var(--blue));
