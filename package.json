@@ -1,0 +1,52 @@
+{
+  "name": "cosmic-games",
+  "version": "1.0.0",
+  "description": "Cosmic Games - Hub de minigames",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.cosmicgames.app",
+    "productName": "Cosmic Games",
+    "copyright": "Copyright © 2025 Cosmic Games",
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "caimabominavel-del",
+      "repo": "cosmic-games"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ]
+  }
+}

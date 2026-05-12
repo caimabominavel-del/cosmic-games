@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval' ws: wss: http: https: blob: data:">
+  <title>Cosmic Games</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<!-- Titlebar -->
+<div class="titlebar">
+  <div class="titlebar-logo">
+    <span>🌌</span> COSMIC GAMES
+  </div>
+  <div class="titlebar-controls">
+    <button title="Minimizar"  onclick="window.cosmic.minimize()">─</button>
+    <button title="Maximizar"  onclick="window.cosmic.maximize()">□</button>
+    <button title="Fechar" class="close" onclick="window.cosmic.close()">✕</button>
+  </div>
+</div>
+
+<!-- Update banner -->
+<div id="update-banner" class="update-banner hidden">
+  <span>🚀 Nova versão disponível!</span>
+  <button id="install-update-btn">Instalar e Reiniciar</button>
+</div>
+
+<!-- Profile overlay -->
+<div id="profile-overlay" class="overlay">
+  <div class="profile-modal">
+    <h2>✨ Configurar Perfil</h2>
+
+    <div class="avatar-section">
+      <div class="avatar-preview" id="avatar-preview">🚀</div>
+
+      <div class="emoji-grid" id="emoji-grid">
+        <!-- preenchido via JS -->
+      </div>
+
+      <button class="upload-btn" id="upload-btn">📁 Usar foto</button>
+      <input type="file" id="avatar-file" accept="image/*" style="display:none">
+    </div>
+
+    <input
+      type="text"
+      id="username-input"
+      class="name-input"
+      placeholder="Seu nome de jogador..."
+      maxlength="20"
+      autocomplete="off"
+    >
+
+    <button class="save-btn" id="save-profile-btn">Entrar no Cosmic Games 🚀</button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="my-profile" id="my-profile">
+      <div class="profile-avatar-wrap" id="open-profile-btn" title="Editar perfil">
+        <div class="avatar" id="my-avatar">🚀</div>
+        <div class="avatar-edit-overlay">✏️</div>
+      </div>
+      <div class="profile-name" id="my-name">Carregando...</div>
+      <button class="profile-edit-btn" id="edit-profile-btn">Editar Perfil</button>
+    </div>
+
+    <div class="online-section">
+      <div class="online-header">
+        <div class="online-dot"></div>
+        Online (<span id="online-count">0</span>)
+      </div>
+      <div id="online-list">
+        <div class="online-empty">Ninguém online por aqui ainda...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="main-content">
+    <div class="section-header">
+      <div class="section-title">Selecione um Jogo</div>
+      <div class="wordlist-badge loading" id="wordlist-badge">⏳ Carregando dicionário...</div>
+    </div>
+
+    <div class="games-grid">
+
+      <!-- Cosmic Bomb -->
+      <div class="game-card" id="cosmic-bomb-card">
+        <div class="game-icon">💣</div>
+        <div class="game-name">Cosmic Bomb</div>
+        <div class="game-desc">
+          A bomba está passando! Digite uma palavra com a sílaba dada antes que o tempo acabe. O tempo vai diminuindo a cada rodada — no final, você tem segundos para pensar!
+        </div>
+        <div class="game-tags">
+          <span class="game-tag">2–8 Jogadores</span>
+          <span class="game-tag">LAN / Radmin</span>
+          <span class="game-tag">PT-BR</span>
+        </div>
+        <button class="play-btn" id="play-cosmic-bomb">Jogar</button>
+      </div>
+
+      <!-- Coming soon -->
+      <div class="game-card coming-soon">
+        <div class="game-icon">🎯</div>
+        <div class="game-name">Em breve...</div>
+        <div class="game-desc">Novos jogos chegando!</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/launcher.js"></script>
+</body>
+</html>

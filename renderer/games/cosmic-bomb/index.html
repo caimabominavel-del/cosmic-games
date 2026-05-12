@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' 'unsafe-inline' 'unsafe-eval' ws: wss: http: https: blob: data:">
+  <title>Cosmic Bomb</title>
+  <link rel="stylesheet" href="game.css">
+</head>
+<body>
+
+<!-- Titlebar -->
+<div class="titlebar">
+  <button class="titlebar-back" id="back-btn">← Voltar</button>
+  <div class="titlebar-logo">💣 Cosmic Bomb</div>
+  <div class="titlebar-controls">
+    <button onclick="window.cosmic.minimize()">─</button>
+    <button onclick="window.cosmic.maximize()">□</button>
+    <button class="close" onclick="window.cosmic.close()">✕</button>
+  </div>
+</div>
+
+<!-- ══ LOADING SCREEN ════════════════════════════════════════ -->
+<div class="screen active" id="screen-loading">
+  <div class="loading-wrap">
+    <div class="loading-bomb">💣</div>
+    <div class="loading-text" id="loading-text">Procurando sala...</div>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- ══ SETUP SCREEN ══════════════════════════════════════════ -->
+<div class="screen" id="screen-setup">
+  <h1>💣 Cosmic Bomb</h1>
+
+  <div class="setup-cards">
+
+    <!-- Host card -->
+    <div class="setup-card">
+      <div class="setup-card-icon">🏠</div>
+      <h2>Criar Sala</h2>
+      <p>Você será o host. Compartilhe seu IP com os outros jogadores.</p>
+
+      <div class="ip-list" id="ip-list">
+        <div style="color:var(--muted);font-size:12px">Carregando IPs...</div>
+      </div>
+
+      <div class="field-group">
+        <label>Porta (padrão: 7777)</label>
+        <input type="number" id="host-port" class="field-input" value="7777" min="1024" max="65535">
+      </div>
+
+      <button class="btn btn-primary" id="btn-host">🚀 Criar Sala</button>
+    </div>
+
+    <!-- Join card -->
+    <div class="setup-card">
+      <div class="setup-card-icon">🔗</div>
+      <h2>Entrar na Sala</h2>
+      <p>Digite o IP do host (disponível no painel dele) e clique em entrar.</p>
+
+      <div class="field-group">
+        <label>IP do Host</label>
+        <input type="text" id="join-ip" class="field-input" placeholder="ex: 26.1.2.3" autocomplete="off">
+      </div>
+
+      <div class="field-group">
+        <label>Porta</label>
+        <input type="number" id="join-port" class="field-input" value="7777" min="1024" max="65535">
+      </div>
+
+      <button class="btn btn-primary" id="btn-join">🔗 Entrar</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ LOBBY SCREEN ══════════════════════════════════════════ -->
+<div class="screen" id="screen-lobby">
+  <div class="lobby-title">💣 Sala de Espera</div>
+  <div class="lobby-subtitle" id="lobby-subtitle">Aguardando jogadores...</div>
+
+  <div class="players-grid" id="lobby-players"></div>
+
+  <div class="lobby-waiting" id="lobby-waiting-msg">
+    Todos os jogadores precisam estar prontos para começar.
+  </div>
+
+  <div class="lobby-actions">
+    <button class="btn btn-secondary" id="btn-ready">✅ Pronto</button>
+    <button class="btn btn-primary hidden" id="btn-start">▶ Iniciar Jogo</button>
+  </div>
+</div>
+
+<!-- ══ GAME SCREEN ═══════════════════════════════════════════ -->
+<div class="screen" id="screen-game">
+
+  <!-- Top: players row -->
+  <div class="players-row" id="players-row"></div>
+
+  <!-- Center: bomb -->
+  <div class="bomb-area">
+    <div class="key-display" id="key-display">??</div>
+
+    <div class="bomb-wrap">
+      <svg class="timer-ring" viewBox="0 0 140 140">
+        <circle class="timer-ring-bg"   cx="70" cy="70" r="70" />
+        <circle class="timer-ring-fill" cx="70" cy="70" r="70" id="timer-ring-fill" />
+      </svg>
+      <div class="bomb-emoji" id="bomb-emoji">💣</div>
+      <div class="timer-text" id="timer-text">--</div>
+    </div>
+
+    <div class="word-log" id="word-log"></div>
+  </div>
+
+  <!-- Bottom: input area -->
+  <div class="input-area">
+    <div class="current-player-label" id="current-player-label">
+      Vez de <span id="current-player-name">...</span>
+    </div>
+
+    <div class="word-input-wrap">
+      <input
+        type="text"
+        id="word-input"
+        class="word-input"
+        placeholder="Digite uma palavra..."
+        maxlength="40"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        disabled
+      >
+      <button class="send-btn" id="send-btn" disabled>➤</button>
+    </div>
+
+    <div class="feedback-msg" id="feedback-msg"></div>
+  </div>
+
+</div>
+
+<!-- ══ GAME OVER SCREEN ══════════════════════════════════════ -->
+<div class="screen" id="screen-gameover">
+  <div class="gameover-title" id="gameover-title">🏆 Fim de Jogo!</div>
+
+  <div class="winner-display" id="winner-display"></div>
+
+  <div class="gameover-actions">
+    <button class="btn btn-secondary" id="btn-play-again">🔄 Jogar Novamente</button>
+    <button class="btn btn-secondary" id="btn-back-menu">🏠 Menu</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- socket.io client from node_modules -->
+<script src="../../../node_modules/socket.io-client/dist/socket.io.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
