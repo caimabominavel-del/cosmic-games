@@ -268,20 +268,7 @@ function setupSocketHandlers() {
     showScreen('gameover');
     renderGameOver(winner);
 
-    // Notifica Discord se eu ganhei a partida
-    if (winner && winner.id === myPlayerId) {
-      window.cosmic.notifyDiscord({
-        type:         'win',
-        winnerName:   profile.username,
-        winnerIcon:   profile.icon || '🏆',
-        gameName:     'Cosmic Bomb',
-        totalPlayers: players.length,
-        totalRounds:  state.roundNumber,
-        catchphrase:  profile.catchphrase || ''
-      }).catch(() => {});
-    }
-
-    // Submete score e verifica passagem no ranking
+    // Submete score e verifica passagem no ranking (Discord só notifica se passou alguém)
     const me = players.find(p => p.id === myPlayerId);
     if (me && me.score > 0) {
       submitScoreAndCheckPassing(me.score);
@@ -653,7 +640,7 @@ async function loadLeaderboard() {
     <div class="lb-row">
       <span class="lb-rank">${medals[p.rank - 1] || `#${p.rank}`}</span>
       <span class="lb-name">${esc(p.name)}</span>
-      <span class="lb-wins">${p.wins} vitória${p.wins !== 1 ? 's' : ''}</span>
+      <span class="lb-wins">${p.wins.toLocaleString('pt-BR')} pts</span>
     </div>
   `).join('');
 }
