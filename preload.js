@@ -28,7 +28,7 @@ contextBridge.exposeInMainWorld('cosmic', {
   submitScore:    (opts) => ipcRenderer.invoke('submit-score', opts),
   getLeaderboard: (opts) => ipcRenderer.invoke('get-leaderboard', opts),
 
-  // Discord (stub)
+  // Discord
   notifyDiscord: (opts) => ipcRenderer.invoke('notify-discord', opts),
 
   // Updates

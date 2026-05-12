@@ -255,13 +255,21 @@ function setupSocketHandlers() {
     showScreen('gameover');
     renderGameOver(winner);
 
-    // Submete vitória se eu ganhei
+    // Submete vitória e notifica Discord se eu ganhei
     if (winner && winner.id === myPlayerId) {
       window.cosmic.submitScore({
         game: 'cosmic-bomb',
         playerUuid: profile.uuid,
         playerName: profile.username,
         score: 1
+      }).catch(() => {});
+
+      window.cosmic.notifyDiscord({
+        winnerName:   profile.username,
+        winnerIcon:   profile.icon || '🏆',
+        gameName:     'Cosmic Bomb',
+        totalPlayers: players.length,
+        totalRounds:  state.roundNumber
       }).catch(() => {});
     }
 

@@ -143,13 +143,22 @@ ipcMain.handle('download-wordlist', async () => {
 
 ipcMain.handle('wordlist-status', () => WordValidator.getStatus());
 
-// ── IPC: Discord webhook (stub — filled in later) ──────────
-ipcMain.handle('notify-discord', async (_, { message }) => {
-  const webhookUrl = store.get('discord.webhookUrl');
+// ── IPC: Discord webhook ────────────────────────────────────
+ipcMain.handle('notify-discord', async (_, { winnerName, winnerIcon, gameName, totalPlayers, totalRounds }) => {
+  const webhookUrl = cfg.discordWebhook;
   if (!webhookUrl) return { ok: false, reason: 'not_configured' };
+
   const axios = require('axios');
   try {
-    await axios.post(webhookUrl, { content: message });
+    await axios.post(webhookUrl, {
+      embeds: [{
+        title: `${winnerIcon || '🏆'} ${winnerName} venceu uma partida!`,
+        description: `**${gameName}** · ${totalPlayers} jogadores · ${totalRounds} rodadas`,
+        color: 0x8b5cf6,
+        footer: { text: 'Cosmic Games' },
+        timestamp: new Date().toISOString()
+      }]
+    });
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
