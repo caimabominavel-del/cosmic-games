@@ -26,14 +26,11 @@
     "productName": "Cosmic Games",
     "copyright": "Copyright © 2025 Cosmic Games",
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "icon": "assets/icon.ico"
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico"
+      "allowToChangeInstallationDirectory": true
     },
     "publish": {
       "provider": "github",
