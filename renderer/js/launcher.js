@@ -13,6 +13,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadProfile();
   startWordlistDownload();
   startOnlinePolling();
+  loadLeaders();
   bindEvents();
   setupUpdater();
 });
@@ -105,15 +106,31 @@ function updateEmojiSelection() {
 
 function handleAvatarUpload(file) {
   if (!file) return;
+
+  // GIFs: armazena direto sem passar pelo canvas (preserva animação)
+  if (file.type === 'image/gif') {
+    if (file.size > 800 * 1024) {
+      alert('GIF muito grande! Máximo 800KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      pendingAvatarBase64 = e.target.result;
+      document.getElementById('avatar-preview').innerHTML =
+        `<img src="${pendingAvatarBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+
+  // Imagens estáticas: redimensiona para 80x80 via canvas
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
-      // Resize to 80x80 thumbnail via canvas
       const canvas = document.createElement('canvas');
       canvas.width = 80; canvas.height = 80;
       const ctx = canvas.getContext('2d');
-      // Center-crop
       const size = Math.min(img.width, img.height);
       const sx = (img.width  - size) / 2;
       const sy = (img.height - size) / 2;
@@ -199,6 +216,38 @@ async function startWordlistDownload() {
     badge.className = 'wordlist-badge error';
     badge.textContent = '⚠️ Modo offline (sem dicionário)';
   }
+}
+
+// ── Leaders ───────────────────────────────────────────────────
+async function loadLeaders() {
+  await loadLeaderBlock('cosmic-bomb', 'leaders-cosmic-bomb');
+}
+
+async function loadLeaderBlock(game, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  const result = await window.cosmic.getLeaderboard({ game, limit: 5 });
+
+  if (!result.ok || !result.data.length) {
+    el.innerHTML = '<div class="leader-loading">Sem dados ainda.</div>';
+    return;
+  }
+
+  const medals = ['🥇', '🥈', '🥉', '4', '5'];
+  el.innerHTML = result.data.map((p, i) => `
+    <div class="leader-row">
+      <span class="leader-rank">${medals[i]}</span>
+      <span class="leader-name rank-${i + 1}">${esc(p.name)}</span>
+      <span class="leader-pts">${p.wins.toLocaleString()} pts</span>
+    </div>
+  `).join('');
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
 // ── Game navigation ───────────────────────────────────────────

@@ -212,7 +212,7 @@ function setupSocketHandlers() {
     updatePlayerChips();
   });
 
-  socket.on('word_result', ({ valid, word, reason, playerId, responseTime }) => {
+  socket.on('word_result', ({ valid, word, reason, playerId, pts, streak, scores }) => {
     if (!valid) {
       const msgs = {
         no_key:       `❌ A palavra não contém "${state.currentKey}"`,
@@ -227,9 +227,21 @@ function setupSocketHandlers() {
       return;
     }
 
-    // Valid word
+    // Valid — update local scores
+    if (scores) {
+      scores.forEach(s => {
+        const p = state.players.find(p => p.id === s.id);
+        if (p) { p.score = s.score; p.streak = s.streak; }
+      });
+    }
+
     addWordToLog(word, playerId);
-    if (playerId === myPlayerId) flashInput('valid-word');
+    updatePlayerChips();
+
+    if (playerId === myPlayerId) {
+      flashInput('valid-word');
+      if (pts > 0) showFloatingPts(pts, streak);
+    }
     clearFeedback();
   });
 
@@ -248,22 +260,27 @@ function setupSocketHandlers() {
     }, 800);
   });
 
-  socket.on('game_over', ({ winner, players }) => {
+  socket.on('game_over', ({ winner, players, totalRounds }) => {
     state.players = players;
     state.phase = 'gameover';
+    state.roundNumber = totalRounds || state.roundNumber;
     stopBombTimer();
     showScreen('gameover');
     renderGameOver(winner);
 
-    // Submete vitória e notifica Discord se eu ganhei
-    if (winner && winner.id === myPlayerId) {
+    // Cada jogador submete seu próprio score
+    const me = players.find(p => p.id === myPlayerId);
+    if (me && me.score > 0) {
       window.cosmic.submitScore({
-        game: 'cosmic-bomb',
+        game:       'cosmic-bomb',
         playerUuid: profile.uuid,
         playerName: profile.username,
-        score: 1
+        score:      me.score
       }).catch(() => {});
+    }
 
+    // Notifica Discord se eu ganhei
+    if (winner && winner.id === myPlayerId) {
       window.cosmic.notifyDiscord({
         winnerName:   profile.username,
         winnerIcon:   profile.icon || '🏆',
@@ -273,7 +290,6 @@ function setupSocketHandlers() {
       }).catch(() => {});
     }
 
-    // Carrega leaderboard global
     loadLeaderboard();
   });
 
@@ -383,9 +399,14 @@ function renderPlayersRow() {
     lives.className = 'lives';
     lives.innerHTML = renderLives(p.lives);
 
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'chip-score';
+    scoreEl.textContent = '0 pts';
+
     chip.appendChild(av);
     chip.appendChild(name);
     chip.appendChild(lives);
+    chip.appendChild(scoreEl);
     row.appendChild(chip);
   });
 }
@@ -402,10 +423,24 @@ function updatePlayerChips() {
   state.players.forEach(p => {
     const chip = $(`chip-${p.id}`);
     if (!chip) return;
-    const livesEl = chip.querySelector('.lives');
+    const livesEl  = chip.querySelector('.lives');
+    const scoreEl  = chip.querySelector('.chip-score');
     if (livesEl) livesEl.innerHTML = renderLives(p.lives);
+    if (scoreEl) {
+      scoreEl.textContent = `${p.score || 0} pts`;
+      if (p.streak >= 3) scoreEl.textContent += ` 🔥${p.streak}`;
+    }
     chip.classList.toggle('dead', p.lives <= 0);
+    chip.classList.toggle('active', p.id === state.currentPlayerId);
   });
+}
+
+function showFloatingPts(pts, streak) {
+  const el = document.createElement('div');
+  el.className = 'floating-pts';
+  el.textContent = `+${pts}${streak >= 3 ? ' 🔥' : ''}`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
 }
 
 function updateCurrentPlayerLabel() {

@@ -66,7 +66,7 @@ class CosmicBombServer {
   _freshState() {
     return {
       players: [],
-      phase: 'lobby',            // 'lobby' | 'playing' | 'ended'
+      phase: 'lobby',
       currentPlayerIndex: 0,
       currentKey: '',
       currentBombTime: INITIAL_BOMB_TIME,
@@ -78,8 +78,26 @@ class CosmicBombServer {
   }
 
   _publicPlayers() {
-    return this.state.players.map(({ id, name, icon, avatarBase64, lives, ready }) =>
-      ({ id, name, icon, avatarBase64, lives, ready }));
+    return this.state.players.map(({ id, name, icon, avatarBase64, lives, ready, score, streak }) =>
+      ({ id, name, icon, avatarBase64, lives, ready, score: score || 0, streak: streak || 0 }));
+  }
+
+  // ── Scoring ──────────────────────────────────────────────
+  _calcWordScore(word, responseTimeMs, streak, playerCount) {
+    // Comprimento: +10 por letra acima de 2
+    const lengthPts = Math.max(0, word.length - 2) * 10;
+    // Velocidade: máx 60pts (janela de 5s)
+    const speedPts  = Math.max(0, Math.floor((5000 - responseTimeMs) / 83));
+    // Sequência: +20 por acerto consecutivo, máx 100
+    const streakPts = Math.min(streak * 20, 100);
+    // Multiplicador: 2 jogadores = 1x, cada extra +25%
+    const mult = 1 + Math.max(0, playerCount - 2) * 0.25;
+    return Math.round((lengthPts + speedPts + streakPts) * mult);
+  }
+
+  _calcWinBonus(playerCount) {
+    const mult = 1 + Math.max(0, playerCount - 2) * 0.25;
+    return Math.round(300 * mult);
   }
 
   _alivePlayers() {
@@ -118,7 +136,9 @@ class CosmicBombServer {
           icon: icon || '🚀',
           avatarBase64: avatarBase64 || null,
           lives: INITIAL_LIVES,
-          ready: false
+          ready: false,
+          score: 0,
+          streak: 0
         };
 
         this.state.players.push(player);
@@ -186,7 +206,7 @@ class CosmicBombServer {
     this.state.currentBombTime = INITIAL_BOMB_TIME;
     this.state.roundNumber = 0;
     this.state.usedWords = new Set();
-    this.state.players.forEach(p => { p.lives = INITIAL_LIVES; });
+    this.state.players.forEach(p => { p.lives = INITIAL_LIVES; p.score = 0; p.streak = 0; });
 
     this.io.emit('game_start', {
       players: this._publicPlayers(),
@@ -262,13 +282,23 @@ class CosmicBombServer {
     this._clearBombTimer();
 
     const responseTime = Date.now() - this.state.bombStartedAt;
+    const player = this.state.players.find(p => p.id === socket.id);
 
-    this.io.emit('word_result', {
-      valid: true,
-      word,
-      playerId: socket.id,
-      responseTime
-    });
+    if (player) {
+      player.streak++;
+      const pts = this._calcWordScore(normWord, responseTime, player.streak, this.state.players.length);
+      player.score += pts;
+
+      this.io.emit('word_result', {
+        valid: true,
+        word,
+        playerId: socket.id,
+        responseTime,
+        pts,
+        streak:  player.streak,
+        scores:  this._publicPlayers().map(p => ({ id: p.id, score: p.score, streak: p.streak }))
+      });
+    }
 
     setTimeout(() => this._nextTurn(), TURN_PAUSE);
   }
@@ -277,7 +307,8 @@ class CosmicBombServer {
     const current = this._currentPlayer();
     if (!current) return;
 
-    current.lives = Math.max(0, current.lives - 1);
+    current.lives  = Math.max(0, current.lives - 1);
+    current.streak = 0; // reset streak on explosion
 
     this.io.emit('bomb_explode', {
       playerId: current.id,
@@ -299,11 +330,17 @@ class CosmicBombServer {
 
     const winner = this.state.players.find(p => p.lives > 0) || null;
 
+    // Add win bonus to winner's score
+    if (winner) {
+      winner.score += this._calcWinBonus(this.state.players.length);
+    }
+
     this.io.emit('game_over', {
       winner: winner
-        ? { id: winner.id, name: winner.name, icon: winner.icon }
+        ? { id: winner.id, name: winner.name, icon: winner.icon, score: winner.score }
         : null,
-      players: this._publicPlayers()
+      players: this._publicPlayers(),
+      totalRounds: this.state.roundNumber
     });
 
     // Auto-reset lobby after 12 seconds

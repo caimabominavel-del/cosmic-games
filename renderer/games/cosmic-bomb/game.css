@@ -322,6 +322,33 @@ input  { font-family: inherit; }
 
 .life.lost { filter: grayscale(1); opacity: 0.3; }
 
+.chip-score {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cyan);
+  letter-spacing: 0.3px;
+}
+
+/* Pontos flutuantes */
+.floating-pts {
+  position: fixed;
+  top: 45%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--green);
+  text-shadow: 0 0 20px rgba(34,197,94,0.8);
+  pointer-events: none;
+  z-index: 300;
+  animation: float-up 1.2s ease-out forwards;
+}
+
+@keyframes float-up {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-80px); }
+}
+
 /* Center: bomb area */
 .bomb-area {
   display: flex;
